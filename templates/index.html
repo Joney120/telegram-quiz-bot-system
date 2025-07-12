@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Quiz Bot Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .sidebar-active { transform: translateX(0); }
+        .sidebar-inactive { transform: translateX(-100%); }
+        .content-shift { margin-left: 16rem; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover:hover { transform: translateY(-2px); transition: transform 0.2s; }
+        .status-online { color: #10b981; }
+        .status-offline { color: #ef4444; }
+        .status-pending { color: #f59e0b; }
+        .bg-pattern { background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 1px, transparent 0); background-size: 20px 20px; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center gradient-bg bg-pattern">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-96">
+            <div class="text-center mb-8">
+                <i class="fas fa-robot text-6xl text-indigo-600 mb-4"></i>
+                <h1 class="text-3xl font-bold text-gray-800">Quiz Bot Admin</h1>
+                <p class="text-gray-600 mt-2">Management System</p>
+            </div>
+            <form id="loginForm">
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-2"></i>Admin Password
+                    </label>
+                    <input type="password" id="adminPassword" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                           placeholder="Enter admin password">
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all font-medium">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                </button>
+                <div id="loginError" class="text-red-500 text-sm mt-2 hidden"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 sidebar-active">
+            <div class="flex items-center justify-center h-16 bg-indigo-600 text-white">
+                <i class="fas fa-robot text-2xl mr-3"></i>
+                <h1 class="text-xl font-bold">Quiz Bot Admin</h1>
+            </div>
+            <nav class="mt-8">
+                <a href="#" onclick="showSection('dashboard')" class="flex items-center px-6 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors nav-link active">
+                    <i class="fas fa-tachometer-alt mr-3"></i>Dashboard
+                </a>
+                <a href="#" onclick="showSection('channels')" class="flex items-center px-6 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors nav-link">
+                    <i class="fas fa-broadcast-tower mr-3"></i>Channels
+                </a>
+                <a href="#" onclick="showSection('questions')" class="flex items-center px-6 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors nav-link">
+                    <i class="fas fa-question-circle mr-3"></i>Questions
+                </a>
+                <a href="#" onclick="showSection('scheduling')" class="flex items-center px-6 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors nav-link">
+                    <i class="fas fa-calendar-alt mr-3"></i>Scheduling
+                </a>
+                <a href="#" onclick="showSection('analytics')" class="flex items-center px-6 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors nav-link">
+                    <i class="fas fa-chart-line mr-3"></i>Analytics
+                </a>
+                <a href="#" onclick="showSection('settings')" class="flex items-center px-6 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors nav-link">
+                    <i class="fas fa-cog mr-3"></i>Settings
+                </a>
+            </nav>
+            <div class="absolute bottom-0 w-full p-4 border-t">
+                <button onclick="logout()" class="w-full bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" class="content-shift min-h-screen">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <div class="flex items-center">
+                        <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <h2 id="sectionTitle" class="text-2xl font-bold text-gray-800 ml-4">Dashboard</h2>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-green-500 rounded-full pulse-dot"></div>
+                            <span class="text-sm text-gray-600">System Online</span>
+                        </div>
+                        <div id="currentTime" class="text-sm text-gray-600"></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section id="dashboardSection" class="p-6 fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Total Channels</p>
+                                <p id="totalChannels" class="text-3xl font-bold text-indigo-600">0</p>
+                            </div>
+                            <div class="bg-indigo-100 p-3 rounded-lg">
+                                <i class="fas fa-broadcast-tower text-indigo-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Active Channels</p>
+                                <p id="activeChannels" class="text-3xl font-bold text-green-600">0</p>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i class="fas fa-play-circle text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Total Questions</p>
+                                <p id="totalQuestions" class="text-3xl font-bold text-purple-600">0</p>
+                            </div>
+                            <div class="bg-purple-100 p-3 rounded-lg">
+                                <i class="fas fa-question-circle text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Quizzes Today</p>
+                                <p id="quizzesToday" class="text-3xl font-bold text-orange-600">0</p>
+                            </div>
+                            <div class="bg-orange-100 p-3 rounded-lg">
+                                <i class="fas fa-calendar-day text-orange-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Quiz Activity</h3>
+                        <div style="height: 300px;">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Channel Performance</h3>
+                        <div style="height: 300px;">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
+                        <div id="recentActivity" class="space-y-3">
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                <div>
+                                    <p class="text-sm font-medium">Quiz sent to @Class_9_hindi_notes</p>
+                                    <p class="text-xs text-gray-500">2 minutes ago</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                                <i class="fas fa-plus-circle text-blue-500 mr-3"></i>
+                                <div>
+                                    <p class="text-sm font-medium">New questions added to Hindi category</p>
+                                    <p class="text-xs text-gray-500">15 minutes ago</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                                <i class="fas fa-calendar-check text-purple-500 mr-3"></i>
+                                <div>
+                                    <p class="text-sm font-medium">Schedule updated for Science channel</p>
+                                    <p class="text-xs text-gray-500">1 hour ago</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+                        <div class="space-y-3">
+                            <button onclick="sendQuizNow()" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
+                                <i class="fas fa-play mr-2"></i>Send Quiz Now
+                            </button>
+                            <button onclick="testBotConnection()" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-wifi mr-2"></i>Test Bot Connection
+                            </button>
+                            <button onclick="showSection('channels')" class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Add New Channel
+                            </button>
+                            <button onclick="exportData()" class="w-full bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-download mr-2"></i>Export Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Channels Section -->
+            <section id="channelsSection" class="p-6 fade-in hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Channel Management</h2>
+                    <button onclick="showAddChannelModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Add Channel
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <div class="p-6 border-b">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+                            <div class="flex items-center space-x-4">
+                                <div class="relative">
+                                    <input type="text" id="channelSearch" placeholder="Search channels..." 
+                                           class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                                </div>
+                                <select id="categoryFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">All Categories</option>
+                                    <option value="Hindi">Hindi</option>
+                                    <option value="English">English</option>
+                                    <option value="Science">Science</option>
+                                    <option value="Mathematics">Mathematics</option>
+                                    <option value="Social">Social</option>
+                                    <option value="Computer">Computer</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="refreshChannels()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                                    <i class="fas fa-sync-alt mr-2"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="channelsList" class="divide-y divide-gray-200">
+                        <!-- Channels will be populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Questions Section -->
+            <section id="questionsSection" class="p-6 fade-in hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Question Management</h2>
+                    <div class="flex space-x-2">
+                        <button onclick="showUploadModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-upload mr-2"></i>Upload Questions
+                        </button>
+                        <button onclick="showAddQuestionModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>Add Question
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Question Categories</h3>
+                        <div id="questionCategories" class="space-y-2">
+                            <!-- Categories will be populated here -->
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Questions by Channel</h3>
+                        <div style="height: 300px;">
+                            <canvas id="questionsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border">
+                    <div class="p-6 border-b">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-800">All Questions</h3>
+                            <select id="questionChannelFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">All Channels</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="questionsList" class="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+                        <!-- Questions will be populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Scheduling Section -->
+            <section id="schedulingSection" class="p-6 fade-in hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Quiz Scheduling</h2>
+                    <button onclick="showScheduleModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-calendar-plus mr-2"></i>Add Schedule
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Today's Schedule</h3>
+                        <div id="todaySchedule" class="space-y-3">
+                            <!-- Today's schedules will be populated here -->
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Upcoming Quizzes</h3>
+                        <div id="upcomingQuizzes" class="space-y-3">
+                            <!-- Upcoming quizzes will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border">
+                    <div class="p-6 border-b">
+                        <h3 class="text-lg font-semibold text-gray-800">All Schedules</h3>
+                    </div>
+                    <div id="schedulesList" class="divide-y divide-gray-200">
+                        <!-- Schedules will be populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analyticsSection" class="p-6 fade-in hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Analytics & Reports</h2>
+                    <div class="flex space-x-2">
+                        <select id="analyticsTimeRange" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                        <button onclick="exportAnalytics()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Quiz Success Rate</h3>
+                        <div style="height: 300px;">
+                            <canvas id="successRateChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Channel Engagement</h3>
+                        <div style="height: 300px;">
+                            <canvas id="engagementChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border">
+                    <div class="p-6 border-b">
+                        <h3 class="text-lg font-semibold text-gray-800">Performance Summary</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-indigo-600" id="totalQuizzesSent">0</div>
+                                <div class="text-sm text-gray-600">Total Quizzes Sent</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-green-600" id="averageSuccessRate">0%</div>
+                                <div class="text-sm text-gray-600">Average Success Rate</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-purple-600" id="totalEngagement">0</div>
+                                <div class="text-sm text-gray-600">Total Engagement</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settingsSection" class="p-6 fade-in hidden">
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">System Settings</h2>
+                    
+                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Bot Configuration</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Quiz Bot Token</label>
+                                    <input type="text" id="quizBotToken" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Answer Bot Token</label>
+                                    <input type="text" id="answerBotToken" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" readonly>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex space-x-4">
+                                <button onclick="testQuizBot()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                                    <i class="fas fa-robot mr-2"></i>Test Quiz Bot
+                                </button>
+                                <button onclick="testAnswerBot()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                                    <i class="fas fa-comment mr-2"></i>Test Answer Bot
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm border">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">System Settings</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-gray-800">Auto-schedule enabled</p>
+                                        <p class="text-sm text-gray-600">Automatically send quizzes based on channel schedules</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="autoSchedule" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-gray-800">Error notifications</p>
+                                        <p class="text-sm text-gray-600">Get notified when errors occur</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="errorNotifications" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-gray-800">Real-time updates</p>
+                                        <p class="text-sm text-gray-600">Enable real-time dashboard updates</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="realTimeUpdates" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm border">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Data Management</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <button onclick="backupData()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                                    <i class="fas fa-download mr-2"></i>Backup Data
+                                </button>
+                                <button onclick="clearData()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                                    <i class="fas fa-trash mr-2"></i>Clear All Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Channel Modal -->
+    <div id="addChannelModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6 border-b">
+                    <h3 class="text-xl font-semibold text-gray-800">Add New Channel</h3>
+                </div>
+                <div class="p-6">
+                    <form id="addChannelForm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Channel Name</label>
+                                <input type="text" id="channelName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Channel ID/Username</label>
+                                <input type="text" id="channelId" required placeholder="@channelname or -1001234567890" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Discussion Group ID</label>
+                                <input type="text" id="discussionGroupId" placeholder="@groupname or -1001234567890" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                                <select id="channelCategory" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">Select Category</option>
+                                    <option value="Hindi">Hindi</option>
+                                    <option value="English">English</option>
+                                    <option value="Science">Science</option>
+                                    <option value="Mathematics">Mathematics</option>
+                                    <option value="Social">Social</option>
+                                    <option value="Computer">Computer</option>
+                                    <option value="General">General Knowledge</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Questions per Quiz</label>
+                                <input type="number" id="questionsPerQuiz" value="10" min="1" max="20" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                                <select id="channelStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-4">
+                            <button type="button" onclick="closeAddChannelModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Add Channel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Questions Modal -->
+    <div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
+                <div class="p-6 border-b">
+                    <h3 class="text-xl font-semibold text-gray-800">Upload Questions</h3>
+                </div>
+                <div class="p-6">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Channel</label>
+                        <select id="uploadChannelSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select Channel</option>
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Upload JSON File</label>
+                        <input type="file" id="questionsFile" accept=".json" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="mb-6">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Required JSON Format:</h4>
+                        <pre class="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto"><code>{
+  "channel_name": "Channel Name",
+  "category": "Subject Category",
+  "questions": [
+    {
+      "question": "Question text here?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_answer": 2,
+      "explanation": "Brief explanation for Telegram quiz",
+      "reason": "Detailed reasoning why this answer is correct"
+    }
+  ]
+}</code></pre>
+                    </div>
+                    <div class="flex justify-end space-x-4">
+                        <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                        <button onclick="uploadQuestions()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-upload mr-2"></i>Upload Questions
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // System Configuration
+        const SYSTEM_CONFIG = {
+            adminPassword: '1230R@j',
+            quizBotToken: '6642298097:AAHXjwoFaTlP0Y7MuULbUoqHiUJOZO98v4k',
+            answerBotToken: '6233735663:AAF6ULU2C0XAcyaKhXU6G7Bg39EXTVXWUwU',
+            telegramApiBase: 'https://api.telegram.org/bot'
+        };
+
+        // Global Variables
+        let channels = [];
+        let questions = [];
+        let schedules = [];
+        let isLoggedIn = false;
+        let currentSection = 'dashboard';
+        let charts = {};
+
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+        });
+
+        function initializeApp() {
+            loadFromStorage();
+            checkLoginStatus();
+            
+            if (isLoggedIn) {
+                showMainApp();
+                updateDashboard();
+                initializeCharts();
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('addChannelForm').addEventListener('submit', handleAddChannel);
+            document.getElementById('channelSearch').addEventListener('input', filterChannels);
+            document.getElementById('categoryFilter').addEventListener('change', filterChannels);
+            document.getElementById('questionChannelFilter').addEventListener('change', filterQuestions);
+            document.getElementById('analyticsTimeRange').addEventListener('change', updateAnalytics);
+        }
+
+        // Authentication Functions
+        function handleLogin(e) {
+            e.preventDefault();
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password === SYSTEM_CONFIG.adminPassword) {
+                isLoggedIn = true;
+                localStorage.setItem('isLoggedIn', 'true');
+                showMainApp();
+                updateDashboard();
+                initializeCharts();
+                showToast('Login successful!', 'success');
+            } else {
+                showError('loginError', 'Invalid password');
+            }
+        }
+
+        function logout() {
+            isLoggedIn = false;
+            localStorage.removeItem('isLoggedIn');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('adminPassword').value = '';
+            showToast('Logged out successfully', 'info');
+        }
+
+        function checkLoginStatus() {
+            const loginStatus = localStorage.getItem('isLoggedIn');
+            if (loginStatus === 'true') {
+                isLoggedIn = true;
+            }
+        }
+
+        function showMainApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+        }
+
+        // Navigation Functions
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName + 'Section').classList.remove('hidden');
+            
+            // Update navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active', 'bg-indigo-50', 'text-indigo-600');
+            });
+            event.target.classList.add('active', 'bg-indigo-50', 'text-indigo-600');
+            
+            // Update section title
+            document.getElementById('sectionTitle').textContent = sectionName.charAt(0).toUpperCase() + sectionName.slice(1);
+            
+            currentSection = sectionName;
+            
+            // Load section-specific data
+            switch (sectionName) {
+                case 'dashboard':
+                    updateDashboard();
+                    break;
+                case 'channels':
+                    loadChannels();
+                    break;
+                case 'questions':
+                    loadQuestions();
+                    break;
+                case 'scheduling':
+                    loadSchedules();
+                    break;
+                case 'analytics':
+                    updateAnalytics();
+                    break;
+                case 'settings':
+                    loadSettings();
+                    break;
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            sidebar.classList.toggle('sidebar-active');
+            sidebar.classList.toggle('sidebar-inactive');
+            mainContent.classList.toggle('content-shift');
+        }
+
+        // Dashboard Functions
+        function updateDashboard() {
+            const stats = calculateStats();
+            
+            document.getElementById('totalChannels').textContent = stats.totalChannels;
+            document.getElementById('activeChannels').textContent = stats.activeChannels;
+            document.getElementById('totalQuestions').textContent = stats.totalQuestions;
+            document.getElementById('quizzesToday').textContent = stats.quizzesToday;
+            
+            updateDashboardCharts();
+        }
+
+        function calculateStats() {
+            const activeChannels = channels.filter(channel => channel.status === 'active').length;
+            const totalQuestions = questions.length;
+            const today = new Date().toDateString();
+            const quizzesToday = schedules.filter(schedule => 
+                new Date(schedule.nextRun).toDateString() === today
+            ).length;
+            
+            return {
+                totalChannels: channels.length,
+                activeChannels: activeChannels,
+                totalQuestions: totalQuestions,
+                quizzesToday: quizzesToday
+            };
+        }
+
+        function updateDashboardCharts() {
+            updateActivityChart();
+            updatePerformanceChart();
+        }
+
+        function updateActivityChart() {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            
+            if (charts.activity) {
+                charts.activity.destroy();
+            }
+            
+            charts.activity = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Quizzes Sent',
+                        data: [12, 19, 3, 5, 2, 3, 7],
+                        borderColor: '#4F46E5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function updatePerformanceChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            if (charts.performance) {
+                charts.performance.destroy();
+            }
+            
+            const channelNames = channels.slice(0, 5).map(c => c.name);
+            const performanceData = channels.slice(0, 5).map(() => Math.floor(Math.random() * 100));
+            
+            charts.performance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: channelNames,
+                    datasets: [{
+                        label: 'Engagement Rate',
+                        data: performanceData,
+                        backgroundColor: [
+                            '#4F46E5',
+                            '#059669',
+                            '#DC2626',
+                            '#D97706',
+                            '#7C3AED'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeCharts() {
+            setTimeout(() => {
+                updateDashboardCharts();
+            }, 100);
+        }
+
+        // Channel Management Functions
+        function loadChannels() {
+            const channelsList = document.getElementById('channelsList');
+            const uploadChannelSelect = document.getElementById('uploadChannelSelect');
+            const questionChannelFilter = document.getElementById('questionChannelFilter');
+            
+            channelsList.innerHTML = '';
+            uploadChannelSelect.innerHTML = '<option value="">Select Channel</option>';
+            questionChannelFilter.innerHTML = '<option value="">All Channels</option>';
+            
+            channels.forEach(channel => {
+                const channelElement = createChannelElement(channel);
+                channelsList.appendChild(channelElement);
+                
+                const option = document.createElement('option');
+                option.value = channel.id;
+                option.textContent = channel.name;
+                uploadChannelSelect.appendChild(option);
+                questionChannelFilter.appendChild(option.cloneNode(true));
+            });
+        }
+
+        function createChannelElement(channel) {
+            const div = document.createElement('div');
+            div.className = 'p-6 flex items-center justify-between hover:bg-gray-50';
+            
+            const statusClass = channel.status === 'active' ? 'status-online' : 'status-offline';
+            const statusIcon = channel.status === 'active' ? 'fa-check-circle' : 'fa-times-circle';
+            
+            div.innerHTML = `
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-broadcast-tower text-indigo-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-800">${channel.name}</h3>
+                        <p class="text-sm text-gray-600">${channel.channelId}</p>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">${channel.category}</span>
+                            <span class="text-xs text-gray-500">${channel.questionsPerQuiz} questions/quiz</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div class="text-center">
+                        <div class="text-sm font-medium text-gray-900">${getChannelQuestionCount(channel.id)}</div>
+                        <div class="text-xs text-gray-500">Questions</div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <i class="fas ${statusIcon} ${statusClass}"></i>
+                        <span class="text-sm ${statusClass}">${channel.status}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="testChannelConnection('${channel.id}')" class="text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-wifi"></i>
+                        </button>
+                        <button onclick="sendQuizToChannel('${channel.id}')" class="text-green-600 hover:text-green-800">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button onclick="editChannel('${channel.id}')" class="text-indigo-600 hover:text-indigo-800">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteChannel('${channel.id}')" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function getChannelQuestionCount(channelId) {
+            return questions.filter(q => q.channelId === channelId).length;
+        }
+
+        function showAddChannelModal() {
+            document.getElementById('addChannelModal').classList.remove('hidden');
+        }
+
+        function closeAddChannelModal() {
+            document.getElementById('addChannelModal').classList.add('hidden');
+            document.getElementById('addChannelForm').reset();
+        }
+
+        function handleAddChannel(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const channel = {
+                id: generateId(),
+                name: document.getElementById('channelName').value,
+                channelId: document.getElementById('channelId').value,
+                discussionGroupId: document.getElementById('discussionGroupId').value,
+                category: document.getElementById('channelCategory').value,
+                questionsPerQuiz: parseInt(document.getElementById('questionsPerQuiz').value),
+                status: document.getElementById('channelStatus').value,
+                createdAt: new Date().toISOString(),
+                lastQuizSent: null
+            };
+            
+            channels.push(channel);
+            saveToStorage();
+            loadChannels();
+            closeAddChannelModal();
+            showToast('Channel added successfully!', 'success');
+        }
+
+        function filterChannels() {
+            const search = document.getElementById('channelSearch').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            
+            const filteredChannels = channels.filter(channel => {
+                const matchesSearch = channel.name.toLowerCase().includes(search) || 
+                                    channel.channelId.toLowerCase().includes(search);
+                const matchesCategory = !category || channel.category === category;
+                return matchesSearch && matchesCategory;
+            });
+            
+            displayFilteredChannels(filteredChannels);
+        }
+
+        function displayFilteredChannels(filteredChannels) {
+            const channelsList = document.getElementById('channelsList');
+            channelsList.innerHTML = '';
+            
+            filteredChannels.forEach(channel => {
+                const channelElement = createChannelElement(channel);
+                channelsList.appendChild(channelElement);
+            });
+        }
+
+        function deleteChannel(channelId) {
+            if (confirm('Are you sure you want to delete this channel?')) {
+                channels = channels.filter(c => c.id !== channelId);
+                questions = questions.filter(q => q.channelId !== channelId);
+                saveToStorage();
+                loadChannels();
+                showToast('Channel deleted successfully', 'success');
+            }
+        }
+
+        function refreshChannels() {
+            loadChannels();
+            showToast('Channels refreshed', 'info');
+        }
+
+        // Question Management Functions
+        function loadQuestions() {
+            updateQuestionCategories();
+            updateQuestionsChart();
+            displayQuestions();
+        }
+
+        function updateQuestionCategories() {
+            const categories = {};
+            questions.forEach(q => {
+                const category = q.category || 'Uncategorized';
+                categories[category] = (categories[category] || 0) + 1;
+            });
+            
+            const categoriesDiv = document.getElementById('questionCategories');
+            categoriesDiv.innerHTML = '';
+            
+            Object.entries(categories).forEach(([category, count]) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 bg-gray-50 rounded';
+                div.innerHTML = `
+                    <span class="text-sm font-medium">${category}</span>
+                    <span class="text-sm text-gray-600">${count}</span>
+                `;
+                categoriesDiv.appendChild(div);
+            });
+        }
+
+        function updateQuestionsChart() {
+            const ctx = document.getElementById('questionsChart').getContext('2d');
+            
+            if (charts.questions) {
+                charts.questions.destroy();
+            }
+            
+            const channelData = {};
+            channels.forEach(channel => {
+                channelData[channel.name] = questions.filter(q => q.channelId === channel.id).length;
+            });
+            
+            charts.questions = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(channelData),
+                    datasets: [{
+                        data: Object.values(channelData),
+                        backgroundColor: [
+                            '#4F46E5', '#059669', '#DC2626', '#D97706', '#7C3AED',
+                            '#0891B2', '#C2410C', '#BE123C', '#9333EA', '#0D9488'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function displayQuestions() {
+            const questionsList = document.getElementById('questionsList');
+            questionsList.innerHTML = '';
+            
+            questions.forEach(question => {
+                const questionElement = createQuestionElement(question);
+                questionsList.appendChild(questionElement);
+            });
+        }
+
+        function createQuestionElement(question) {
+            const div = document.createElement('div');
+            div.className = 'p-4 hover:bg-gray-50';
+            
+            const channel = channels.find(c => c.id === question.channelId);
+            const channelName = channel ? channel.name : 'Unknown Channel';
+            
+            div.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h4 class="font-medium text-gray-900 mb-2">${question.question}</h4>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            ${question.options.map((option, index) => `
+                                <div class="text-sm text-gray-600 ${index === question.correct_answer ? 'font-medium text-green-600' : ''}">
+                                    ${String.fromCharCode(65 + index)}. ${option}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                            <span class="px-2 py-1 bg-gray-100 rounded">${channelName}</span>
+                            <span class="px-2 py-1 bg-gray-100 rounded">${question.category || 'Uncategorized'}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="editQuestion('${question.id}')" class="text-indigo-600 hover:text-indigo-800">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteQuestion('${question.id}')" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function filterQuestions() {
+            const channelId = document.getElementById('questionChannelFilter').value;
+            
+            const filteredQuestions = channelId ? 
+                questions.filter(q => q.channelId === channelId) : 
+                questions;
+            
+            displayFilteredQuestions(filteredQuestions);
+        }
+
+        function displayFilteredQuestions(filteredQuestions) {
+            const questionsList = document.getElementById('questionsList');
+            questionsList.innerHTML = '';
+            
+            filteredQuestions.forEach(question => {
+                const questionElement = createQuestionElement(question);
+                questionsList.appendChild(questionElement);
+            });
+        }
+
+        function showUploadModal() {
+            document.getElementById('uploadModal').classList.remove('hidden');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.add('hidden');
+        }
+
+        function uploadQuestions() {
+            const channelId = document.getElementById('uploadChannelSelect').value;
+            const fileInput = document.getElementById('questionsFile');
+            
+            if (!channelId) {
+                showToast('Please select a channel', 'error');
+                return;
+            }
+            
+            if (!fileInput.files[0]) {
+                showToast('Please select a JSON file', 'error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (!data.questions || !Array.isArray(data.questions)) {
+                        throw new Error('Invalid JSON format');
+                    }
+                    
+                    data.questions.forEach(q => {
+                        const question = {
+                            id: generateId(),
+                            channelId: channelId,
+                            question: q.question,
+                            options: q.options,
+                            correct_answer: q.correct_answer,
+                            explanation: q.explanation,
+                            reason: q.reason,
+                            category: data.category || 'Uncategorized',
+                            createdAt: new Date().toISOString()
+                        };
+                        questions.push(question);
+                    });
+                    
+                    saveToStorage();
+                    loadQuestions();
+                    closeUploadModal();
+                    showToast(`${data.questions.length} questions uploaded successfully!`, 'success');
+                    
+                } catch (error) {
+                    showToast('Error parsing JSON file: ' + error.message, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function deleteQuestion(questionId) {
+            if (confirm('Are you sure you want to delete this question?')) {
+                questions = questions.filter(q => q.id !== questionId);
+                saveToStorage();
+                loadQuestions();
+                showToast('Question deleted successfully', 'success');
+            }
+        }
+
+        // Scheduling Functions
+        function loadSchedules() {
+            updateTodaySchedule();
+            updateUpcomingQuizzes();
+            displayAllSchedules();
+        }
+
+        function updateTodaySchedule() {
+            const today = new Date().toDateString();
+            const todaySchedules = schedules.filter(schedule => 
+                new Date(schedule.nextRun).toDateString() === today
+            );
+            
+            const todayScheduleDiv = document.getElementById('todaySchedule');
+            todayScheduleDiv.innerHTML = '';
+            
+            if (todaySchedules.length === 0) {
+                todayScheduleDiv.innerHTML = '<p class="text-gray-500 text-center py-4">No quizzes scheduled for today</p>';
+                return;
+            }
+            
+            todaySchedules.forEach(schedule => {
+                const channel = channels.find(c => c.id === schedule.channelId);
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-3 bg-indigo-50 rounded-lg';
+                div.innerHTML = `
+                    <div>
+                        <p class="font-medium text-gray-900">${channel ? channel.name : 'Unknown Channel'}</p>
+                        <p class="text-sm text-gray-600">${new Date(schedule.nextRun).toLocaleTimeString()}</p>
+                    </div>
+                    <button onclick="runScheduleNow('${schedule.id}')" class="text-indigo-600 hover:text-indigo-800">
+                        <i class="fas fa-play"></i>
+                    </button>
+                `;
+                todayScheduleDiv.appendChild(div);
+            });
+        }
+
+        function updateUpcomingQuizzes() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const upcomingQuizzes = schedules.filter(schedule => 
+                new Date(schedule.nextRun) >= tomorrow
+            ).slice(0, 5);
+            
+            const upcomingDiv = document.getElementById('upcomingQuizzes');
+            upcomingDiv.innerHTML = '';
+            
+            if (upcomingQuizzes.length === 0) {
+                upcomingDiv.innerHTML = '<p class="text-gray-500 text-center py-4">No upcoming quizzes</p>';
+                return;
+            }
+            
+            upcomingQuizzes.forEach(schedule => {
+                const channel = channels.find(c => c.id === schedule.channelId);
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
+                div.innerHTML = `
+                    <div>
+                        <p class="font-medium text-gray-900">${channel ? channel.name : 'Unknown Channel'}</p>
+                        <p class="text-sm text-gray-600">${new Date(schedule.nextRun).toLocaleDateString()}</p>
+                    </div>
+                    <i class="fas fa-clock text-gray-400"></i>
+                `;
+                upcomingDiv.appendChild(div);
+            });
+        }
+
+        function displayAllSchedules() {
+            const schedulesList = document.getElementById('schedulesList');
+            schedulesList.innerHTML = '';
+            
+            schedules.forEach(schedule => {
+                const scheduleElement = createScheduleElement(schedule);
+                schedulesList.appendChild(scheduleElement);
+            });
+        }
+
+        function createScheduleElement(schedule) {
+            const div = document.createElement('div');
+            div.className = 'p-6 flex items-center justify-between hover:bg-gray-50';
+            
+            const channel = channels.find(c => c.id === schedule.channelId);
+            const channelName = channel ? channel.name : 'Unknown Channel';
+            
+            div.innerHTML = `
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-calendar-alt text-purple-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-800">${channelName}</h3>
+                        <p class="text-sm text-gray-600">Next run: ${new Date(schedule.nextRun).toLocaleString()}</p>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">${schedule.frequency}</span>
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">${schedule.time}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="editSchedule('${schedule.id}')" class="text-indigo-600 hover:text-indigo-800">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteSchedule('${schedule.id}')" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function deleteSchedule(scheduleId) {
+            if (confirm('Are you sure you want to delete this schedule?')) {
+                schedules = schedules.filter(s => s.id !== scheduleId);
+                saveToStorage();
+                loadSchedules();
+                showToast('Schedule deleted successfully', 'success');
+            }
+        }
+
+        // Analytics Functions
+        function updateAnalytics() {
+            const timeRange = document.getElementById('analyticsTimeRange').value;
+            updateSuccessRateChart();
+            updateEngagementChart();
+            updatePerformanceSummary();
+        }
+
+        function updateSuccessRateChart() {
+            const ctx = document.getElementById('successRateChart').getContext('2d');
+            
+            if (charts.successRate) {
+                charts.successRate.destroy();
+            }
+            
+            charts.successRate = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Success Rate',
+                        data: [85, 92, 88, 94],
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateEngagementChart() {
+            const ctx = document.getElementById('engagementChart').getContext('2d');
+            
+            if (charts.engagement) {
+                charts.engagement.destroy();
+            }
+            
+            charts.engagement = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: channels.slice(0, 5).map(c => c.name),
+                    datasets: [{
+                        label: 'Engagement Score',
+                        data: [75, 82, 68, 91, 79],
+                        backgroundColor: '#8B5CF6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function updatePerformanceSummary() {
+            document.getElementById('totalQuizzesSent').textContent = '247';
+            document.getElementById('averageSuccessRate').textContent = '89%';
+            document.getElementById('totalEngagement').textContent = '1,234';
+        }
+
+        // Settings Functions
+        function loadSettings() {
+            document.getElementById('quizBotToken').value = SYSTEM_CONFIG.quizBotToken;
+            document.getElementById('answerBotToken').value = SYSTEM_CONFIG.answerBotToken;
+        }
+
+        // Bot Integration Functions
+        async function testQuizBot() {
+            try {
+                const response = await fetch(`${SYSTEM_CONFIG.telegramApiBase}${SYSTEM_CONFIG.quizBotToken}/getMe`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    showToast('Quiz bot connection successful!', 'success');
+                } else {
+                    showToast('Quiz bot connection failed: ' + data.description, 'error');
+                }
+            } catch (error) {
+                showToast('Quiz bot connection error: ' + error.message, 'error');
+            }
+        }
+
+        async function testAnswerBot() {
+            try {
+                const response = await fetch(`${SYSTEM_CONFIG.telegramApiBase}${SYSTEM_CONFIG.answerBotToken}/getMe`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    showToast('Answer bot connection successful!', 'success');
+                } else {
+                    showToast('Answer bot connection failed: ' + data.description, 'error');
+                }
+            } catch (error) {
+                showToast('Answer bot connection error: ' + error.message, 'error');
+            }
+        }
+
+        async function testChannelConnection(channelId) {
+            const channel = channels.find(c => c.id === channelId);
+            if (!channel) return;
+            
+            try {
+                const response = await fetch(`${SYSTEM_CONFIG.telegramApiBase}${SYSTEM_CONFIG.quizBotToken}/getChat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: channel.channelId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    showToast(`Connection to ${channel.name} successful!`, 'success');
+                } else {
+                    showToast(`Connection to ${channel.name} failed: ${data.description}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Connection error: ${error.message}`, 'error');
+            }
+        }
+
+        async function sendQuizToChannel(channelId) {
+            const channel = channels.find(c => c.id === channelId);
+            if (!channel) return;
+            
+            const channelQuestions = questions.filter(q => q.channelId === channelId);
+            if (channelQuestions.length === 0) {
+                showToast('No questions available for this channel', 'error');
+                return;
+            }
+            
+            const randomQuestion = channelQuestions[Math.floor(Math.random() * channelQuestions.length)];
+            
+            try {
+                const response = await fetch(`${SYSTEM_CONFIG.telegramApiBase}${SYSTEM_CONFIG.quizBotToken}/sendPoll`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: channel.channelId,
+                        question: randomQuestion.question,
+                        options: randomQuestion.options,
+                        type: 'quiz',
+                        correct_option_id: randomQuestion.correct_answer,
+                        explanation: randomQuestion.explanation,
+                        is_anonymous: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    showToast(`Quiz sent to ${channel.name} successfully!`, 'success');
+                    
+                    // Update channel last quiz sent
+                    channel.lastQuizSent = new Date().toISOString();
+                    saveToStorage();
+                    
+                    // Send answer to discussion group if configured
+                    if (channel.discussionGroupId) {
+                        setTimeout(() => {
+                            sendAnswerToDiscussionGroup(channel, randomQuestion);
+                        }, 60000); // Send answer after 1 minute
+                    }
+                } else {
+                    showToast(`Failed to send quiz: ${data.description}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error sending quiz: ${error.message}`, 'error');
+            }
+        }
+
+        async function sendAnswerToDiscussionGroup(channel, question) {
+            if (!channel.discussionGroupId) return;
+            
+            const answerText = `
+🎯 **Quiz Answer**
+
+**Question:** ${question.question}
+
+**Correct Answer:** ${question.options[question.correct_answer]}
+
+**Explanation:** ${question.explanation}
+
+${question.reason ? `**Detailed Reason:** ${question.reason}` : ''}
+
+📚 Keep learning and stay curious!
+            `;
+            
+            try {
+                const response = await fetch(`${SYSTEM_CONFIG.telegramApiBase}${SYSTEM_CONFIG.answerBotToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: channel.discussionGroupId,
+                        text: answerText,
+                        parse_mode: 'Markdown'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    console.log('Answer sent to discussion group successfully');
+                } else {
+                    console.error('Failed to send answer to discussion group:', data.description);
+                }
+            } catch (error) {
+                console.error('Error sending answer to discussion group:', error);
+            }
+        }
+
+        // Quick Actions
+        function sendQuizNow() {
+            if (channels.length === 0) {
+                showToast('No channels configured', 'error');
+                return;
+            }
+            
+            const activeChannels = channels.filter(c => c.status === 'active');
+            if (activeChannels.length === 0) {
+                showToast('No active channels found', 'error');
+                return;
+            }
+            
+            const randomChannel = activeChannels[Math.floor(Math.random() * activeChannels.length)];
+            sendQuizToChannel(randomChannel.id);
+        }
+
+        async function testBotConnection() {
+            showToast('Testing bot connections...', 'info');
+            
+            try {
+                await testQuizBot();
+                await testAnswerBot();
+            } catch (error) {
+                showToast('Connection test failed', 'error');
+            }
+        }
+
+        // Data Management Functions
+        function saveToStorage() {
+            localStorage.setItem('channels', JSON.stringify(channels));
+            localStorage.setItem('questions', JSON.stringify(questions));
+            localStorage.setItem('schedules', JSON.stringify(schedules));
+        }
+
+        function loadFromStorage() {
+            const storedChannels = localStorage.getItem('channels');
+            const storedQuestions = localStorage.getItem('questions');
+            const storedSchedules = localStorage.getItem('schedules');
+            
+            if (storedChannels) {
+                channels = JSON.parse(storedChannels);
+            } else {
+                // Initialize with sample data
+                channels = [
+                    {
+                        id: 'ch1',
+                        name: 'Class 9 Hindi Notes',
+                        channelId: '@Class_9_hindi_notes',
+                        discussionGroupId: '@Class_9_hindi_discussion',
+                        category: 'Hindi',
+                        questionsPerQuiz: 15,
+                        status: 'active',
+                        createdAt: new Date().toISOString(),
+                        lastQuizSent: null
+                    },
+                    {
+                        id: 'ch2',
+                        name: 'Class 9 English Notes',
+                        channelId: '@Class_9_english_notes',
+                        discussionGroupId: '@Class_9_english_discussion',
+                        category: 'English',
+                        questionsPerQuiz: 15,
+                        status: 'active',
+                        createdAt: new Date().toISOString(),
+                        lastQuizSent: null
+                    },
+                    {
+                        id: 'ch3',
+                        name: 'Class 9 Science Notes',
+                        channelId: '@class_9_science_notes',
+                        discussionGroupId: '@class_9_science_discussion',
+                        category: 'Science',
+                        questionsPerQuiz: 15,
+                        status: 'active',
+                        createdAt: new Date().toISOString(),
+                        lastQuizSent: null
+                    }
+                ];
+            }
+            
+            if (storedQuestions) {
+                questions = JSON.parse(storedQuestions);
+            } else {
+                // Initialize with sample questions
+                questions = [
+                    {
+                        id: 'q1',
+                        channelId: 'ch1',
+                        question: 'सूरदास की रचना शैली किस प्रकार की है?',
+                        options: ['वीर रस', 'श्रृंगार रस', 'भक्ति रस', 'हास्य रस'],
+                        correct_answer: 2,
+                        explanation: 'सूरदास की रचना भक्ति रस प्रधान है।',
+                        reason: 'सूरदास कृष्ण भक्ति के प्रसिद्ध कवि थे।',
+                        category: 'Hindi',
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 'q2',
+                        channelId: 'ch2',
+                        question: 'Who wrote "To be or not to be"?',
+                        options: ['Charles Dickens', 'William Shakespeare', 'Jane Austen', 'George Orwell'],
+                        correct_answer: 1,
+                        explanation: 'This famous line is from Hamlet by William Shakespeare.',
+                        reason: 'It is one of the most famous soliloquies in English literature.',
+                        category: 'English',
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 'q3',
+                        channelId: 'ch3',
+                        question: 'What is the chemical formula of water?',
+                        options: ['H2O', 'CO2', 'NaCl', 'C6H12O6'],
+                        correct_answer: 0,
+                        explanation: 'Water is composed of two hydrogen atoms and one oxygen atom.',
+                        reason: 'This is the most basic chemical formula in chemistry.',
+                        category: 'Science',
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+            }
+            
+            if (storedSchedules) {
+                schedules = JSON.parse(storedSchedules);
+            } else {
+                // Initialize with sample schedules
+                schedules = [
+                    {
+                        id: 'sch1',
+                        channelId: 'ch1',
+                        frequency: 'daily',
+                        time: '09:00',
+                        nextRun: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                        isActive: true,
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 'sch2',
+                        channelId: 'ch2',
+                        frequency: 'daily',
+                        time: '10:00',
+                        nextRun: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                        isActive: true,
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+            }
+        }
+
+        function exportData() {
+            const data = {
+                channels: channels,
+                questions: questions,
+                schedules: schedules,
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `quiz-bot-data-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Data exported successfully', 'success');
+        }
+
+        function backupData() {
+            exportData();
+            showToast('Backup created successfully', 'success');
+        }
+
+        function clearData() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                channels = [];
+                questions = [];
+                schedules = [];
+                saveToStorage();
+                updateDashboard();
+                showToast('All data cleared', 'info');
+            }
+        }
+
+        function exportAnalytics() {
+            const analyticsData = {
+                totalChannels: channels.length,
+                activeChannels: channels.filter(c => c.status === 'active').length,
+                totalQuestions: questions.length,
+                questionsByCategory: {},
+                channelPerformance: [],
+                exportDate: new Date().toISOString()
+            };
+            
+            // Group questions by category
+            questions.forEach(q => {
+                const category = q.category || 'Uncategorized';
+                analyticsData.questionsByCategory[category] = (analyticsData.questionsByCategory[category] || 0) + 1;
+            });
+            
+            // Channel performance
+            channels.forEach(channel => {
+                analyticsData.channelPerformance.push({
+                    name: channel.name,
+                    questionsCount: questions.filter(q => q.channelId === channel.id).length,
+                    status: channel.status,
+                    lastQuizSent: channel.lastQuizSent
+                });
+            });
+            
+            const blob = new Blob([JSON.stringify(analyticsData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `quiz-bot-analytics-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Analytics exported successfully', 'success');
+        }
+
+        // Utility Functions
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('en-US', {
+                timeZone: 'Asia/Kolkata',
+                hour12: true,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('currentTime').textContent = `IST: ${timeString}`;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `max-w-sm bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 transform transition-all duration-300 translate-x-full`;
+            
+            const colors = {
+                success: 'text-green-600',
+                error: 'text-red-600',
+                info: 'text-blue-600',
+                warning: 'text-yellow-600'
+            };
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle',
+                warning: 'fa-exclamation-triangle'
+            };
+            
+            toast.innerHTML = `
+                <div class="flex-1 w-0 p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas ${icons[type]} ${colors[type]}"></i>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <p class="text-sm font-medium text-gray-900">${message}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex border-l border-gray-200">
+                    <button onclick="this.parentElement.parentElement.remove()" class="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        function showError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+            
+            setTimeout(() => {
+                errorElement.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Initialize demo data if needed
+        function initializeDemoData() {
+            if (channels.length === 0) {
+                loadFromStorage();
+            }
+        }
+
+        // Auto-schedule functionality (for demo purposes)
+        function initializeAutoScheduler() {
+            setInterval(() => {
+                const now = new Date();
+                const currentTime = now.toTimeString().slice(0, 5);
+                
+                schedules.forEach(schedule => {
+                    if (schedule.isActive && schedule.time === currentTime) {
+                        const channel = channels.find(c => c.id === schedule.channelId);
+                        if (channel && channel.status === 'active') {
+                            sendQuizToChannel(schedule.channelId);
+                        }
+                    }
+                });
+            }, 60000); // Check every minute
+        }
+
+        // Start auto-scheduler
+        setTimeout(initializeAutoScheduler, 1000);
+    </script>
+</body>
+</html>
